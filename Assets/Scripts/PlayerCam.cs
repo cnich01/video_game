@@ -15,6 +15,7 @@ public class PlayerCam : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        yRotation = 0;
     }
 
     void Update()
