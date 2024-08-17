@@ -9,3 +9,4 @@ To setup this project:
 5. Copy all project files into your repo folder
 6. Open Unity Hub
 7. Add a project, directing the path to your repo
+8. If there are any duplicate files, skip them DO NOT REPLACE
