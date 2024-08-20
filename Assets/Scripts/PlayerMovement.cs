@@ -8,6 +8,7 @@ public class PlayerMovement : MonoBehaviour
     public float sprintSpeed;
 
     public float groundDrag;
+    public float gravity;
 
     [Header("Jumping")]
     public float jumpForce;
@@ -34,6 +35,10 @@ public class PlayerMovement : MonoBehaviour
     public float maxSlopeAngle;
     private RaycastHit slopeHit;
     private bool exitingSlope;
+
+    [Header("Respawn")]
+    public Vector3 respawnPoint;
+    public float belowMapPoint;
 
     float horizontalInput;
     float verticalInput;
@@ -77,6 +82,7 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             rb.drag = 0;
+            rb.AddForce(Vector3.down * gravity, ForceMode.Force);
         }
 
     }
@@ -109,6 +115,11 @@ public class PlayerMovement : MonoBehaviour
 
         //turn off gravity while on slope
         rb.useGravity = !OnSlope();
+
+        if(transform.position.y < belowMapPoint)
+        {
+            transform.position = respawnPoint;
+        }
         
     }
 
