@@ -5,13 +5,15 @@ public class PlayerCam : MonoBehaviour
 {
     public float sensX;
     public float sensY;
+    public float FOV;
 
     public Transform player;
     public Transform firstPersonCameraPosition;
     public Transform thirdPersonCameraPosition;
 
-    float xRotation;
+    float xRotation; //used for First Person
     float yRotation;
+    float yPosition; //used for Third Person
 
 
     private bool firstPerson = true;
@@ -19,22 +21,16 @@ public class PlayerCam : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        yPosition = thirdPersonCameraPosition.position.y;
     }
 
     void Update()
     {
         //get mouse input
-        float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensX;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensY;
+        float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensX * 10;
+        float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensY * 10;
 
         yRotation += mouseX;
-
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-
-        //rotate cam and player
-        transform.rotation = Quaternion.Euler(xRotation,yRotation,0);
-        player.rotation = Quaternion.Euler(0, yRotation, 0);
 
         //switch between first and third person;
         if (Input.GetKeyDown(KeyCode.F1))
@@ -44,12 +40,34 @@ public class PlayerCam : MonoBehaviour
 
         if (firstPerson)
         {
+            //calculate rotation
+            xRotation -= mouseY;
+            xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+
+            //position camera
             transform.position = firstPersonCameraPosition.position;
+
+            //rotate camera
+            transform.rotation = Quaternion.Euler(xRotation, yRotation, 0);
         }
         else
         {
-            transform.position = thirdPersonCameraPosition.position;
+            //calculate position
+            yPosition -= mouseY/2;
+            yPosition = Mathf.Clamp(yPosition, -4.5f, 10f);
+
+            //position camera
+            transform.position = new Vector3(thirdPersonCameraPosition.position.x, thirdPersonCameraPosition.position.y + yPosition, thirdPersonCameraPosition.position.z);
+
+            //rotate camera
+            transform.rotation = Quaternion.Euler(0,yRotation, 0);
             transform.LookAt(player.position);
         }
+
+        //rotate player
+        player.rotation = Quaternion.Euler(0, yRotation, 0);
+
+        //set Field of View
+        Camera.main.fieldOfView = FOV;
     }
 }
