@@ -51,39 +51,26 @@ public class PlayerMovement : MonoBehaviour
         crouching,
         air
     }
-    public SelectedItem selectedItem;
-    public enum SelectedItem
-    {
-        one,
-        two,
-        three,
-        four,
-        five,
-        six,
-        seven,
-        eight,
-        nine,
-        zero
-    }
     #endregion
 
     #region Item Interaction
     [Header("Item Interaction")]
-    public Transform itemSelector;
+   
     [SerializeField]
     private LayerMask pickableLayerMask;
     [SerializeField]
     private Transform playerCameraTransform;
+    public GameObject inHandObject;
     [SerializeField]
-    private Transform pickUpSlot;
-    [SerializeField]
-    private GameObject inHandObject;
+    public Transform pickUpSlot;
     [SerializeField]
     private GameObject pickUpUI;
     [SerializeField]
     [Min(1)]
     private float hitRange = 3;
     private RaycastHit hit;
+    private float dropCooldown = 0.25f;
+    bool readyToDrop;
     #endregion
 
     #region Controls
@@ -122,11 +109,15 @@ public class PlayerMovement : MonoBehaviour
 
     Rigidbody rb;
 
+    InventorySystem inventorySystem;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        inventorySystem = GetComponent<InventorySystem>();
 
         readyToJump = true;
+        readyToDrop = true;
 
         startYScale = transform.localScale.y;
 
@@ -225,101 +216,112 @@ public class PlayerMovement : MonoBehaviour
         }
 
         //get object interaction inputs
-        if(hit.collider != null && Input.GetKey(interactKey))
+        if(hit.collider != null && Input.GetKey(interactKey) && hit.collider.TryGetComponent<ItemObject>(out ItemObject item))
         {
-            inHandObject = hit.collider.gameObject;
+            if (inventorySystem.GetNextSlot() > -1)
+            {
+                hit.collider.gameObject.transform.SetParent(pickUpSlot);
+                hit.collider.gameObject.GetComponent<Rigidbody>().isKinematic = true; ;
+                hit.collider.gameObject.GetComponent<Collider>().enabled = false;
 
-            inHandObject.transform.SetParent(pickUpSlot);
-            inHandObject.GetComponent<Rigidbody>().isKinematic = true; ;
-            inHandObject.GetComponent<Collider>().enabled = false;
+                item.OnHandlePickupItem(hit.collider.gameObject);
+                inventorySystem.SetCurrentSlot(inventorySystem.GetCurrentSlot());
+            }
+            else{
+                //do something to indicate inventory is full
+            }
+
         }
-        
+
         if (inHandObject != null)
         {
             inHandObject.transform.position = pickUpSlot.position;
+            inHandObject.transform.rotation = pickUpSlot.rotation;
 
-            if (Input.GetKey(dropItemKey))
+
+            if (Input.GetKey(dropItemKey) && inHandObject.TryGetComponent<ItemObject>(out ItemObject currentItem) && readyToDrop)
             {
+                readyToDrop = false;
                 inHandObject.transform.SetParent(null);
                 inHandObject.GetComponent<Rigidbody>().isKinematic = false;
                 inHandObject.GetComponent<Collider>().enabled = true;
-
-                inHandObject = null;
+                inHandObject.GetComponent<Rigidbody>().AddForce(inHandObject.transform.forward * 5, ForceMode.Impulse);
+                currentItem.OnHandleDropItem();
+                inventorySystem.SetCurrentSlot(inventorySystem.GetCurrentSlot());
+                Invoke(nameof(ResetDrop), dropCooldown);
             }
         }
-
         #region Hotbar Selection
         //get scroll wheel input
         scrollInput = Input.GetAxis("Mouse ScrollWheel");
 
-        if(scrollInput > 0) //Scroll Right
+        if(scrollInput < 0) //Scroll Right
         {
-            if (itemSelector.localPosition.x < 535.76f)
+            if (inventorySystem.GetCurrentSlot() < 9)
             {
-                itemSelector.Translate(Vector2.right * 260);
+                inventorySystem.SetCurrentSlot(inventorySystem.GetCurrentSlot() + 1);
             }
             else
             {
-                itemSelector.localPosition = new Vector2(-634.24f, 0.25f);
+                inventorySystem.SetCurrentSlot(0);
             }
         }
-        else if(scrollInput < 0) //Scroll Left
+        else if(scrollInput > 0) //Scroll Left
         {
-            if (itemSelector.localPosition.x > -634.24f)
+            if (inventorySystem.GetCurrentSlot() > 0)
             {
-                itemSelector.Translate(Vector2.left * 260);
+                inventorySystem.SetCurrentSlot(inventorySystem.GetCurrentSlot() - 1);
             }
             else
             {
-                itemSelector.localPosition = new Vector2(535.76f, 0.25f);
+                inventorySystem.SetCurrentSlot(9);
             }
         }
 
         if (Input.GetKey(hotbar1Key)){
-            itemSelector.localPosition = new Vector2(-634.24f, 0.25f);
+            inventorySystem.SetCurrentSlot(0);
         }
         else if (Input.GetKey(hotbar2Key))
         {
-            itemSelector.localPosition = new Vector2(-504.24f, 0.25f);
+            inventorySystem.SetCurrentSlot(1);
         }
         else if (Input.GetKey(hotbar3Key))
         {
-            itemSelector.localPosition = new Vector2(-374.24f, 0.25f);
+            inventorySystem.SetCurrentSlot(2);
         }
         else if (Input.GetKey(hotbar4Key))
         {
-            itemSelector.localPosition = new Vector2(-244.24f, 0.25f);
+            inventorySystem.SetCurrentSlot(3);
         }
         else if (Input.GetKey(hotbar5Key))
         {
-            itemSelector.localPosition = new Vector2(-114.24f, 0.25f);
+            inventorySystem.SetCurrentSlot(4);
         }
         else if (Input.GetKey(hotbar6Key))
         {
-            itemSelector.localPosition = new Vector2(15.76f, 0.25f);
+            inventorySystem.SetCurrentSlot(5);
         }
         else if (Input.GetKey(hotbar7Key))
         {
-            itemSelector.localPosition = new Vector2(145.76f, 0.25f);
+            inventorySystem.SetCurrentSlot(6);
         }
         else if (Input.GetKey(hotbar8Key))
         {
-            itemSelector.localPosition = new Vector2(275.76f, 0.25f);
+            inventorySystem.SetCurrentSlot(7);
         }
         else if (Input.GetKey(hotbar9Key))
         {
-            itemSelector.localPosition = new Vector2(405.76f, 0.25f);
+            inventorySystem.SetCurrentSlot(8);
         }
         else if (Input.GetKey(hotbar0Key))
         {
-            itemSelector.localPosition = new Vector2(535.76f, 0.25f);
+            inventorySystem.SetCurrentSlot(9);
         }
         #endregion
     }
 
     private void StateHandler()
     {
-        #region Movement 
         if (Input.GetKey(crouchKey)) 
         {
             movement = MovementState.crouching;
@@ -339,50 +341,6 @@ public class PlayerMovement : MonoBehaviour
         {
             movement = MovementState.air; 
         }
-        #endregion
-
-        #region Selected Item
-        if (itemSelector.localPosition.x == -634.24f)
-        {
-            selectedItem = SelectedItem.one;
-        }
-        else if (itemSelector.localPosition.x == -504.24f)
-        {
-            selectedItem = SelectedItem.two;
-        }
-        else if (itemSelector.localPosition.x == -374.24f)
-        {
-            selectedItem = SelectedItem.three;
-        }
-        else if (itemSelector.localPosition.x == -244.24f)
-        {
-            selectedItem = SelectedItem.four;
-        }
-        else if (itemSelector.localPosition.x == -114.24f)
-        {
-            selectedItem = SelectedItem.five;
-        }
-        else if (itemSelector.localPosition.x == 15.76f)
-        {
-            selectedItem = SelectedItem.six;
-        }
-        else if (itemSelector.localPosition.x == 145.76f)
-        {
-            selectedItem = SelectedItem.seven;
-        }
-        else if (itemSelector.localPosition.x == 275.76f)
-        {
-            selectedItem = SelectedItem.eight;
-        }
-        else if (itemSelector.localPosition.x == 405.76f)
-        {
-            selectedItem = SelectedItem.nine;
-        }
-        else
-        {
-            selectedItem = SelectedItem.zero;
-        }
-        #endregion
     }
 
     private void SpeedControl()
@@ -426,6 +384,11 @@ public class PlayerMovement : MonoBehaviour
     {
         readyToJump = true;
         exitingSlope = false;
+    }
+
+    private void ResetDrop()
+    {
+        readyToDrop = true;
     }
 
     private bool OnSlope()
