@@ -16,3 +16,4 @@ MonoBehaviour:
   displayName: Cube
   icon: {fileID: 21300000, guid: 85f8ff26f6e07724dbc6e97fb8e4425a, type: 3}
   prefab: {fileID: 8387406830151123795, guid: 1581343cd46a7a74283e7635ca43d58f, type: 3}
+  maxStack: 2

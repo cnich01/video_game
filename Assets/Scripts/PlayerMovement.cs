@@ -218,7 +218,7 @@ public class PlayerMovement : MonoBehaviour
         //get object interaction inputs
         if(hit.collider != null && Input.GetKey(interactKey) && hit.collider.TryGetComponent<ItemObject>(out ItemObject item))
         {
-            if (inventorySystem.GetNextSlot() > -1)
+            if (inventorySystem.GetItemSlot(item.referenceItem) > -1)
             {
                 hit.collider.gameObject.transform.SetParent(pickUpSlot);
                 hit.collider.gameObject.GetComponent<Rigidbody>().isKinematic = true; ;
@@ -378,6 +378,11 @@ public class PlayerMovement : MonoBehaviour
             //hit.collider.GetComponent<Highlight>()?.ToggleHighlight(true);
             pickUpUI.SetActive(true);
         }
+    }
+
+    public void SetHitRange(float range)
+    {
+        hitRange = range;
     }
 
     private void ResetJump()

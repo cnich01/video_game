@@ -16,3 +16,4 @@ MonoBehaviour:
   displayName: Cylinder
   icon: {fileID: 21300000, guid: 23b8859bed883924888a564536a35957, type: 3}
   prefab: {fileID: 6251411549914544955, guid: 0603cee0b6df5f94bab2cb1cdb1668b1, type: 3}
+  maxStack: 3

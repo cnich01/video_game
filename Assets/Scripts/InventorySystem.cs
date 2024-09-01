@@ -97,7 +97,7 @@ public class InventorySystem : MonoBehaviour
     {
         for (int i = 0; i < slot.Count; i++)
         {
-            if (slot[i].GetSprite() == itemData.icon)
+            if ((slot[i].GetSprite() == itemData.icon) && (slot[i].GetStackSize() < slot[i].GetMaxStack()))
             {
                 return i;
             }

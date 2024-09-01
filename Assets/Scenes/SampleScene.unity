@@ -4788,7 +4788,7 @@ MonoBehaviour:
   sensX: 80
   sensY: 80
   FOV: 50
-  player: {fileID: 1058692357}
+  player: {fileID: 1058692353}
   firstPersonCameraPosition: {fileID: 1194385456}
   thirdPersonCameraPosition: {fileID: 1472285435}
 --- !u!224 &976636475 stripped

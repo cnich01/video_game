@@ -6,7 +6,7 @@ public class PlayerCam : MonoBehaviour
     public float sensY;
     public float FOV;
 
-    public Transform player;
+    public PlayerMovement player;
     public Transform firstPersonCameraPosition;
     public Transform thirdPersonCameraPosition;
 
@@ -39,6 +39,7 @@ public class PlayerCam : MonoBehaviour
 
         if (firstPerson)
         {
+            player.SetHitRange(3f);
             //calculate rotation
             xRotation -= mouseY;
             xRotation = Mathf.Clamp(xRotation, -90f, 90f);
@@ -51,6 +52,7 @@ public class PlayerCam : MonoBehaviour
         }
         else
         {
+            player.SetHitRange(20f);
             //calculate position
             yPosition -= mouseY/2;
             yPosition = Mathf.Clamp(yPosition, -4.5f, 10f);
@@ -60,11 +62,11 @@ public class PlayerCam : MonoBehaviour
 
             //rotate camera
             transform.rotation = Quaternion.Euler(0,yRotation, 0);
-            transform.LookAt(player.position);
+            transform.LookAt(player.transform.position);
         }
 
         //rotate player
-        player.rotation = Quaternion.Euler(0, yRotation, 0);
+        player.transform.rotation = Quaternion.Euler(0, yRotation, 0);
 
         //set Field of View
         Camera.main.fieldOfView = FOV;
