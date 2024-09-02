@@ -53,7 +53,7 @@ public class ItemSlot : MonoBehaviour
 
     public void RemoveLastObject(InventoryItem item)
     {
-        m_stackObj.Remove(GetObject());
+        m_stackObj.Remove(GetCurrentObject());
         currentStackSize--;
         SetStackLabel();        
     }
@@ -74,7 +74,47 @@ public class ItemSlot : MonoBehaviour
         }
     }
 
-    public GameObject GetObject()
+    public void SetSprite(Sprite image)
+    {
+        m_icon.sprite = image;
+        m_icon.enabled = true;
+    }
+
+    public void SetLabel(string label)
+    {
+        m_label.text = label;
+    }
+
+    public void SetObjectList(List<GameObject> objects)
+    {
+        m_stackObj = objects;
+    }
+
+    public void SetCurrentStackSize(int size)
+    {
+        currentStackSize = size;
+        SetStackLabel();
+    }
+    public void SetMaxStackSize(int size)
+    {
+        maxStackSize = size;
+    }
+
+    public Sprite GetSprite()
+    {
+        return m_icon.sprite;
+    }
+    public string GetLabel()
+    {
+        return m_label.text;
+    }
+
+    public List<GameObject> GetObjectList()
+    {
+        return m_stackObj;
+    }
+
+    public GameObject GetCurrentObject()
     {
         try
         {
@@ -86,17 +126,14 @@ public class ItemSlot : MonoBehaviour
         }
     }
 
-    public Sprite GetSprite()
-    {
-        return m_icon.sprite;
-    }
+    
 
-    public int GetStackSize()
+    public int GetCurrentStackSize()
     {
         return currentStackSize;
     }
 
-    public int GetMaxStack()
+    public int GetMaxStackSize()
     {
         return maxStackSize;
     }

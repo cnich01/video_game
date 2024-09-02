@@ -10,25 +10,37 @@ public class InventorySystem : MonoBehaviour
 {
     private Dictionary<InventoryItemData, InventoryItem> m_itemDictionary;
     public List<InventoryItem> inventory { get; private set; }
-    public List<ItemSlot> slot;
+    public List<ItemSlot> hotbarSlot;
+    public List<ItemSlot> backpackSlot;
     public static InventorySystem current;
 
     public GameObject hotbar;
+    public GameObject backpack;
     public Transform itemSelector;
-    public PlayerMovement playerController;
+    public PlayerController playerController;
 
     [SerializeField]
     private int currentSlot;
 
     private void Awake()
     {
-        playerController = GetComponent<PlayerMovement>();
+        playerController = GetComponent<PlayerController>();
         inventory = new List<InventoryItem>();
-        slot = new List<ItemSlot>();
+        hotbarSlot = new List<ItemSlot>();
+        backpackSlot = new List<ItemSlot>();
 
+        //Create Hotbar Slots
         for (int i = 0; i < hotbar.transform.childCount-1; i++)
         {
-            slot.Add(hotbar.transform.GetChild(i).GetComponent<ItemSlot>());
+            hotbarSlot.Add(hotbar.transform.GetChild(i).GetComponent<ItemSlot>());
+        }
+
+        //Create Inventory Slots
+        for (int i = 0; i < backpack.transform.childCount; i++)
+        {
+            if (backpack.transform.GetChild(i).gameObject.activeSelf){
+                backpackSlot.Add(backpack.transform.GetChild(i).GetComponent<ItemSlot>());
+            }
         }
 
         m_itemDictionary = new Dictionary<InventoryItemData, InventoryItem>();
@@ -50,15 +62,21 @@ public class InventorySystem : MonoBehaviour
         if (m_itemDictionary.TryGetValue(referenceData, out InventoryItem value))
         {
             value.AddToStack();
-            slot[GetItemSlot(referenceData)].Set(value, inHandObject);
+            try
+            {
+                backpackSlot[GetItemSlot(referenceData)].GetCurrentObject().SetActive(false);
+            }
+            catch { }
+            backpackSlot[GetItemSlot(referenceData)].Set(value, inHandObject);
         }
         else
         {
             InventoryItem newItem = new InventoryItem(referenceData);
             inventory.Add(newItem);
             m_itemDictionary.Add(referenceData, newItem);
-            slot[GetNextSlot()].Set(newItem, inHandObject);
+            backpackSlot[GetNextSlot()].Set(newItem, inHandObject);
         }
+        UpdateHotbar();
     }
 
     public void Remove(InventoryItemData referenceData)
@@ -69,23 +87,24 @@ public class InventorySystem : MonoBehaviour
 
             if (value.stackSize == 0)
             {
-                slot[currentSlot].Reset();
+                backpackSlot[currentSlot].Reset();
                 inventory.Remove(value);
                 m_itemDictionary.Remove(referenceData);
             }
             else
             {
-                slot[currentSlot].RemoveLastObject(value);
-                playerController.inHandObject = slot[currentSlot].GetObject();
+                backpackSlot[currentSlot].RemoveLastObject(value);
+                playerController.inHandObject = backpackSlot[currentSlot].GetCurrentObject();
             }
+            UpdateHotbar();
         }
     }
 
     public int GetNextSlot()
     {
-        for(int i = 0; i<slot.Count; i++)
+        for(int i = 0; i< backpackSlot.Count; i++)
         {
-            if (slot[i].GetSprite() == null)
+            if (backpackSlot[i].GetSprite() == null)
             {
                 return i;
             }
@@ -95,9 +114,9 @@ public class InventorySystem : MonoBehaviour
 
     public int GetItemSlot(InventoryItemData itemData)
     {
-        for (int i = 0; i < slot.Count; i++)
+        for (int i = 0; i < backpackSlot.Count; i++)
         {
-            if ((slot[i].GetSprite() == itemData.icon) && (slot[i].GetStackSize() < slot[i].GetMaxStack()))
+            if ((backpackSlot[i].GetSprite() == itemData.icon) && (backpackSlot[i].GetCurrentStackSize() < backpackSlot[i].GetMaxStackSize()))
             {
                 return i;
             }
@@ -105,22 +124,35 @@ public class InventorySystem : MonoBehaviour
         return GetNextSlot();
     }
 
+    public void UpdateHotbar()
+    {
+        for (int i = 0; i < hotbarSlot.Count; i++)
+        {
+            hotbarSlot[i].SetSprite(backpackSlot[i].GetSprite());
+            hotbarSlot[i].SetLabel(backpackSlot[i].GetLabel());
+            hotbarSlot[i].SetMaxStackSize(backpackSlot[i].GetMaxStackSize());
+            hotbarSlot[i].SetObjectList(backpackSlot[i].GetObjectList());
+            hotbarSlot[i].SetCurrentStackSize(backpackSlot[i].GetCurrentStackSize());
+        }
+    }
+
     public void SetCurrentSlot(int number)
     {
         currentSlot = number;
-        for (int i = 0; i < slot.Count; i++)
+        for (int i = 0; i < backpackSlot.Count; i++)
         {
             try
             {
-                slot[i].GetObject().SetActive(false);
+                backpackSlot[i].GetCurrentObject().SetActive(false);
             }
             catch  { }
         }
+        UpdateHotbar();
         itemSelector.localPosition = new Vector2((130 * currentSlot - 634.24f), 0.25f);
         try
         {
-            playerController.inHandObject = slot[currentSlot].GetObject();
-            slot[currentSlot].GetObject().SetActive(true);
+            playerController.inHandObject = hotbarSlot[currentSlot].GetCurrentObject();
+            hotbarSlot[currentSlot].GetCurrentObject().SetActive(true);
         }
         catch  { }
     }

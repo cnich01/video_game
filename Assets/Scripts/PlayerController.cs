@@ -1,8 +1,9 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.UI;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
     #region Player Movement
     [Header("Movement")]
@@ -51,6 +52,44 @@ public class PlayerMovement : MonoBehaviour
         crouching,
         air
     }
+
+    public ScreenState screen;
+    public enum ScreenState
+    {
+        inventory,
+        skills,
+        journal,
+        map,
+        menu,
+        hud
+
+    }
+    #endregion
+
+    #region Player Stats
+    public float maxHealth;
+    public float currentHealth;
+    public UnityEngine.UI.Slider healthSlider;
+    private float healthCooldown = 2f;
+    private bool readyForHealth;
+
+    public float maxHunger;
+    public float currentHunger;
+    public UnityEngine.UI.Slider hungerSlider;
+    private float hungerCooldown = 2f;
+    private bool readyForHunger;
+
+    public float maxStamina;
+    public float currentStamina;
+    public UnityEngine.UI.Slider staminaSlider;
+    private float staminaCooldown = .25f;
+    private bool readyForStamina;
+
+    public float maxMana;
+    public float currentMana;
+    public UnityEngine.UI.Slider manaSlider;
+    private float manaCooldown = 2f;
+    private bool readyForMana;
     #endregion
 
     #region Item Interaction
@@ -65,6 +104,8 @@ public class PlayerMovement : MonoBehaviour
     public Transform pickUpSlot;
     [SerializeField]
     private GameObject pickUpUI;
+    [SerializeField]
+    private GameObject inventoryFullUI;
     [SerializeField]
     [Min(1)]
     private float hitRange = 3;
@@ -83,7 +124,7 @@ public class PlayerMovement : MonoBehaviour
     public KeyCode inventoryKey = KeyCode.Tab;
     public KeyCode dropItemKey = KeyCode.Q;
     public KeyCode skillsKey = KeyCode.I;
-    public KeyCode jounralKey = KeyCode.J;
+    public KeyCode journalKey = KeyCode.J;
     public KeyCode mapKey = KeyCode.M;
     public KeyCode menuKey = KeyCode.Escape;
     public KeyCode talkKey = KeyCode.Return;
@@ -101,6 +142,15 @@ public class PlayerMovement : MonoBehaviour
     public KeyCode hotbar0Key = KeyCode.Alpha0;
     #endregion
 
+    #region Screens
+    public GameObject inventoryScreen;
+    public GameObject skillsScreen;
+    public GameObject journalScreen;
+    public GameObject mapScreen;
+    public GameObject menuScreen;
+    public GameObject hudScreen;
+    #endregion
+
     float horizontalInput;
     float verticalInput;
     float scrollInput;
@@ -111,6 +161,7 @@ public class PlayerMovement : MonoBehaviour
 
     InventorySystem inventorySystem;
 
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -118,10 +169,33 @@ public class PlayerMovement : MonoBehaviour
 
         readyToJump = true;
         readyToDrop = true;
+        readyForHealth = true;
+        readyForHunger = true;
+        readyForStamina = true;
+        readyForMana = true;
 
         startYScale = transform.localScale.y;
 
         pickUpUI.SetActive(false);
+        inventoryFullUI.SetActive(false);
+
+        inventoryScreen.SetActive(false);
+        skillsScreen.SetActive(false);
+        journalScreen.SetActive(false);
+        mapScreen.SetActive(false);
+        menuScreen.SetActive(false);
+
+        screen = ScreenState.hud;
+
+        currentHealth = maxHealth;
+        currentHunger = maxHunger;
+        currentStamina = maxStamina;
+        currentMana = maxMana;
+
+        healthSlider.maxValue = maxHealth;
+        hungerSlider.maxValue = maxHunger;
+        staminaSlider.maxValue = maxStamina;
+        manaSlider.maxValue = maxMana;
     }
 
     void Update()
@@ -129,9 +203,12 @@ public class PlayerMovement : MonoBehaviour
         //ground check
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f);
 
-        CheckInputs(); //Check for user inputs
+        if(screen == ScreenState.hud) { 
+            CheckInputs(); //Check for user inputs
+        }
+
         SpeedControl(); //Limit player speed to max speed
-        StateHandler(); //Control player speed based off of current state
+        StateHandler(); //Control player states
         CheckInteractions(); //Check if there are any interactable objects in front of the player
 
         //set drag
@@ -145,6 +222,32 @@ public class PlayerMovement : MonoBehaviour
             rb.AddForce(Vector3.down * gravity, ForceMode.Force);
         }
 
+        healthSlider.value = currentHealth;
+        hungerSlider.value = currentHunger;
+        staminaSlider.value = currentStamina;
+        manaSlider.value = currentMana;
+
+        if(currentStamina < maxStamina && readyForHunger)
+        {
+            readyForHunger = false;
+            currentHunger--;
+            currentStamina += 2;
+            Invoke(nameof(ResetHungerTicks), hungerCooldown);
+        }
+
+        if(currentHealth < maxHealth && readyForHealth)
+        {
+            readyForHealth = false;
+            currentHealth++;
+            Invoke(nameof(ResetHealthTicks), healthCooldown);
+        }
+
+        if (currentMana < maxMana && readyForMana)
+        {
+            readyForMana = false;
+            currentMana++;
+            Invoke(nameof(ResetManaTicks), manaCooldown);
+        }
     }
 
     void FixedUpdate()
@@ -179,6 +282,7 @@ public class PlayerMovement : MonoBehaviour
         if(transform.position.y < belowMapPoint)
         {
             transform.position = respawnPoint;
+            currentHealth -= 10;
         }
         
     }
@@ -190,10 +294,11 @@ public class PlayerMovement : MonoBehaviour
         verticalInput = Input.GetAxisRaw("Vertical");
 
         //check if jumping
-        if (Input.GetKey(jumpKey) && readyToJump && grounded)
+        if (Input.GetKey(jumpKey) && readyToJump && grounded && currentStamina > 5)
         {
             readyToJump = false;
             exitingSlope = true;
+            currentStamina -= 5;
 
             //reset y velocity
             rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
@@ -327,10 +432,17 @@ public class PlayerMovement : MonoBehaviour
             movement = MovementState.crouching;
             moveSpeed = crouchSpeed;
         }
-        if (grounded && Input.GetKey(sprintKey)) 
+        if (grounded && Input.GetKey(sprintKey) && currentStamina > 0) 
         {
             movement = MovementState.sprinting;
             moveSpeed = sprintSpeed;
+            if (readyForStamina)
+            {
+                readyForStamina = false;
+                currentStamina--;
+                Invoke(nameof(ResetStaminaTicks), staminaCooldown);
+            }
+            
         }
         else if(grounded) 
         {
@@ -341,6 +453,113 @@ public class PlayerMovement : MonoBehaviour
         {
             movement = MovementState.air; 
         }
+
+        //Inventory Screen
+        if (Input.GetKeyUp(inventoryKey))
+        {
+            if (screen != ScreenState.inventory)
+            {
+                screen = ScreenState.inventory;
+                HideAllScreens();
+                inventoryScreen.SetActive(true);
+                LockPlayer();
+            }
+            else
+            {
+                UnlockPlayer();
+            }
+        }
+
+        //Skills Screen
+        if (Input.GetKeyUp(skillsKey))
+        {
+            if (screen != ScreenState.skills)
+            {
+                screen = ScreenState.skills;
+                HideAllScreens();
+                skillsScreen.SetActive(true);
+                LockPlayer();
+            }
+            else
+            {
+                UnlockPlayer();
+            }
+        }
+
+        //Journal Screen
+        if (Input.GetKeyUp(journalKey))
+        {
+            if (screen != ScreenState.journal)
+            {
+                screen = ScreenState.journal;
+                HideAllScreens();
+                journalScreen.SetActive(true);
+                LockPlayer();
+            }
+            else
+            {
+                UnlockPlayer();
+            }
+        }
+
+        //Map Screen
+        if (Input.GetKeyUp(mapKey))
+        {
+            if (screen != ScreenState.map)
+            {
+                screen = ScreenState.map;
+                HideAllScreens();
+                mapScreen.SetActive(true);
+                LockPlayer();
+            }
+            else
+            {
+                UnlockPlayer();
+            }
+        }
+
+        //Menu Screen
+        if (Input.GetKeyUp(menuKey))
+        {
+            if (screen == ScreenState.hud)
+            {
+                screen = ScreenState.menu;
+                menuScreen.SetActive(true);
+                LockPlayer();
+            }
+            else
+            {
+                UnlockPlayer();
+            }
+        }
+    }
+
+    private void HideAllScreens()
+    {
+        inventoryScreen.SetActive(false);
+        skillsScreen.SetActive(false);
+        journalScreen.SetActive(false);
+        mapScreen.SetActive(false);
+        menuScreen.SetActive(false);
+        hudScreen.SetActive(false);
+    }
+
+    private void LockPlayer()
+    {
+        UnityEngine.Cursor.lockState = CursorLockMode.None;
+        UnityEngine.Cursor.visible = true;
+        hudScreen.SetActive(false);
+        horizontalInput = 0f;
+        verticalInput = 0f;
+    }
+
+    private void UnlockPlayer()
+    {
+        HideAllScreens();
+        screen = ScreenState.hud;
+        UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+        UnityEngine.Cursor.visible = false;
+        hudScreen.SetActive(true);
     }
 
     private void SpeedControl()
@@ -352,6 +571,10 @@ public class PlayerMovement : MonoBehaviour
             {
                 rb.velocity = rb.velocity.normalized * moveSpeed;
             }
+        }
+        else if(screen != ScreenState.hud)
+        {
+            rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
         }
 
         //limiting speed on ground or in air
@@ -372,11 +595,21 @@ public class PlayerMovement : MonoBehaviour
         {
             //hit.collider.GetComponent<Highlight>()?.ToggleHighlight(false);
             pickUpUI.SetActive(false);
+            inventoryFullUI.SetActive(false);
         }
         if (Physics.Raycast(playerCameraTransform.position, playerCameraTransform.forward, out hit, hitRange, pickableLayerMask))
         {
             //hit.collider.GetComponent<Highlight>()?.ToggleHighlight(true);
-            pickUpUI.SetActive(true);
+            hit.collider.TryGetComponent<ItemObject>(out ItemObject item);
+            if (inventorySystem.GetItemSlot(item.referenceItem) > -1)
+            {
+                pickUpUI.SetActive(true);
+            }
+            else
+            {
+                inventoryFullUI.SetActive(true);
+            }
+            
         }
     }
 
@@ -385,6 +618,7 @@ public class PlayerMovement : MonoBehaviour
         hitRange = range;
     }
 
+    #region Cooldown Timers
     private void ResetJump()
     {
         readyToJump = true;
@@ -395,6 +629,27 @@ public class PlayerMovement : MonoBehaviour
     {
         readyToDrop = true;
     }
+
+    private void ResetHealthTicks()
+    {
+        readyForHealth = true;
+    }
+
+    private void ResetHungerTicks()
+    {
+        readyForHunger = true;
+    }
+
+    private void ResetStaminaTicks()
+    {
+        readyForStamina = true;
+    }
+
+    private void ResetManaTicks()
+    {
+        readyForMana = true;
+    }
+    #endregion
 
     private bool OnSlope()
     {

@@ -6,13 +6,16 @@ public class PlayerCam : MonoBehaviour
     public float sensY;
     public float FOV;
 
-    public PlayerMovement player;
+    public PlayerController player;
     public Transform firstPersonCameraPosition;
     public Transform thirdPersonCameraPosition;
 
     float xRotation; //used for First Person
     float yRotation;
     float yPosition; //used for Third Person
+
+    float mouseX;
+    float mouseY;
 
 
     private bool firstPerson = true;
@@ -25,10 +28,17 @@ public class PlayerCam : MonoBehaviour
 
     void Update()
     {
-        //get mouse input
-        float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensX * 10;
-        float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensY * 10;
-
+        if (player.screen == PlayerController.ScreenState.hud)
+        {
+            //get mouse input
+            mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * sensX * 10;
+            mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * sensY * 10;
+        }
+        else
+        {
+            mouseX = 0f;
+            mouseY = 0f;
+        }
         yRotation += mouseX;
 
         //switch between first and third person;
@@ -54,14 +64,14 @@ public class PlayerCam : MonoBehaviour
         {
             player.SetHitRange(20f);
             //calculate position
-            yPosition -= mouseY/2;
+            yPosition -= mouseY / 2;
             yPosition = Mathf.Clamp(yPosition, -4.5f, 10f);
 
             //position camera
             transform.position = new Vector3(thirdPersonCameraPosition.position.x, thirdPersonCameraPosition.position.y + yPosition, thirdPersonCameraPosition.position.z);
 
             //rotate camera
-            transform.rotation = Quaternion.Euler(0,yRotation, 0);
+            transform.rotation = Quaternion.Euler(0, yRotation, 0);
             transform.LookAt(player.transform.position);
         }
 
